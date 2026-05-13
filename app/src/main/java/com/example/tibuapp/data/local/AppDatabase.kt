@@ -75,7 +75,7 @@ abstract class AppDatabase : RoomDatabase(){
             db.usuarioDao().insertar(
                 UsuarioEntity(
                     nombre = "ADMIN2",
-                    pin = "1201",
+                    pin = "51348411",
                     rol = "ADMIN"
                 )
             )
