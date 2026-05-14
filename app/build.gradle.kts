@@ -63,6 +63,7 @@ dependencies {
     // Corrutinas
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
+
     // Room con KSP
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
@@ -75,4 +76,6 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    implementation("androidx.compose.material:material-icons-extended:1.7.0")
 }

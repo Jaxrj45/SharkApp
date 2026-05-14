@@ -7,5 +7,4 @@ data class CatalogoUiState (
     val textoBusqueda: String = "",
     val estaCargando: Boolean = false,
     val mensajeError: String? = null
-
     )

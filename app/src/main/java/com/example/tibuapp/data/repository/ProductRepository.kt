@@ -8,6 +8,12 @@ class ProductRepository(private val productoDao: ProductoDao) {
 
     fun obtenerTodos(): Flow<List<ProductoEntity>> =
         productoDao.obtenerTodos()
+    fun obtenerFavoritos(): Flow<List<ProductoEntity>> =
+        productoDao.obtenerFavoritos()
+
+
+    fun buscarPorCategoria(categoria: String): Flow<List<ProductoEntity>> =
+        productoDao.buscarPorCategoria(categoria)
 
     fun buscar(texto: String): Flow<List<ProductoEntity>>? =
         productoDao.buscar(texto)
@@ -31,6 +37,9 @@ class ProductRepository(private val productoDao: ProductoDao) {
 
     suspend fun desactivar(id: Int) =
         productoDao.desactivar(id)
+
+    suspend fun favorito(id: Int) =
+        productoDao.favorito(id)
 
     suspend fun reducirStock(id: Int, cantidad: Int)=
         productoDao.reducirStock(id,cantidad)

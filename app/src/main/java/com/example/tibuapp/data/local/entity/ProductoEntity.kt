@@ -15,5 +15,6 @@ data class ProductoEntity (
     val codigoBarras: String="",
     val categoria: String ="",
     val imagenUrl: String ="",
+    val favorito: Boolean= false,
     val activo: Boolean = true
 )

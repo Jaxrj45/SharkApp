@@ -1,20 +1,24 @@
 package com.example.tibuapp.ui.screens
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.tibuapp.TibuApp
 import com.example.tibuapp.ui.navigation.Pantalla
-import com.example.tibuapp.ui.screens.Catalogo.CatalogoViewModel
-import com.example.tibuapp.ui.screens.catalogo.PantallaCatalogoScreen
+import androidx.compose.ui.platform.LocalContext
+import com.example.tibuapp.ui.screens.Producto.ProductoViewModel
 
 @Composable
 fun MainNavHost() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val app = context.applicationContext as TibuApp
+
+    val productoViewModel: ProductoViewModel = viewModel(
+        factory = ProductoViewModel.factory(app.container.productoRepository)
+    )
 
     NavHost(
         navController = navController,
@@ -35,13 +39,10 @@ fun MainNavHost() {
         }
 
         composable(Pantalla.Catalogo.ruta) {
-            val context = LocalContext.current
-            val app = context.applicationContext as TibuApp
-
-            val catalogoViewModel = remember {
-                CatalogoViewModel(app.container.productoRepository)
-            }
-            PantallaCatalogoScreen(viewModel= catalogoViewModel)
+            CatalogoScreen(
+                productoViewModel = productoViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }
