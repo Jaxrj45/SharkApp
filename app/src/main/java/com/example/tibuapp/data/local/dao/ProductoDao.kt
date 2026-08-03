@@ -23,7 +23,7 @@ interface ProductoDao {
     @Query("SELECT * FROM productos WHERE id=:id")
     suspend fun obtenerPorId(id: Int): ProductoEntity?
 
-    @Query("SELECT * FROM productos WHERE codigoBarras = :codigo LIMIT 1")
+    @Query("SELECT * FROM productos WHERE codigoBarras = :codigo AND activo=1 LIMIT 1  ")
     suspend fun obtenerPorCodigoBarras(codigo: String): ProductoEntity?
 
     @Query("SELECT * FROM productos WHERE nombre LIKE '%' || :busqueda || '%' AND activo=1")

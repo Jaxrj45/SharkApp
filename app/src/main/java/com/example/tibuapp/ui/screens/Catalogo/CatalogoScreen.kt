@@ -1,9 +1,11 @@
 package com.example.tibuapp.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -13,25 +15,46 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.tibuapp.data.local.entity.ProductoEntity
+import com.example.tibuapp.ui.components.BadgeStock
+import com.example.tibuapp.ui.components.PapeleriaScaffold
+import com.example.tibuapp.ui.components.TextoPrecio
+import com.example.tibuapp.ui.components.TibuBoton
+import com.example.tibuapp.ui.components.TibuBotonSecundario
 import com.example.tibuapp.ui.screens.Producto.ProductoViewModel
+import com.example.tibuapp.ui.theme.Blanco
+import com.example.tibuapp.ui.theme.Gris200
+import com.example.tibuapp.ui.theme.Gris500
+import com.example.tibuapp.ui.theme.Gris900
+import com.example.tibuapp.ui.theme.Naranja100
+import com.example.tibuapp.ui.theme.Naranja500
+import com.example.tibuapp.ui.theme.Rojo500
+import com.example.tibuapp.ui.viewmodel.AsistenteViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogoScreen(
     productoViewModel: ProductoViewModel,
+    asistenteViewModel: AsistenteViewModel,
+    codigoBarrasInicial: String? = null,
     onNavigateBack: () -> Unit
 ) {
     val uiState by productoViewModel.uiState.collectAsStateWithLifecycle()
     var mostrarFormulario by remember { mutableStateOf(false) }
     var productoEditando by remember { mutableStateOf<ProductoEntity?>(null) }
 
-    // Mostrar mensajes de éxito o error
+    LaunchedEffect(codigoBarrasInicial) {
+        if (!codigoBarrasInicial.isNullOrBlank()) {
+            productoEditando = null
+            mostrarFormulario = true
+        }
+    }
+
     uiState.mensajeExito?.let { mensaje ->
         LaunchedEffect(mensaje) {
             kotlinx.coroutines.delay(500)
@@ -41,7 +64,8 @@ fun CatalogoScreen(
         }
     }
 
-    Scaffold(
+    PapeleriaScaffold(
+        asistenteViewModel = asistenteViewModel,
         topBar = {
             TopAppBar(
                 title = { Text("📦 Catálogo de Productos") },
@@ -56,100 +80,108 @@ fun CatalogoScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
-        },
-        floatingActionButton = {
+        }
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Barra de búsqueda
+                OutlinedTextField(
+                    value = uiState.busqueda,
+                    onValueChange = { productoViewModel.buscar(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Buscar producto...") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = {
+                        if (uiState.busqueda.isNotEmpty()) {
+                            IconButton(onClick = { productoViewModel.buscar("") }) {
+                                Icon(Icons.Default.Clear, "Limpiar")
+                            }
+                        }
+                    },
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Contador de productos
+                Text(
+                    text = "${uiState.productos.size} productos",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Lista de productos
+                if (uiState.productos.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("📦", style = MaterialTheme.typography.displayMedium)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "No hay productos aún",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                "Toca + para agregar el primero",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(uiState.productos, key = { it.id }) { producto ->
+                            TarjetaProducto(
+                                producto = producto,
+                                onEditar = {
+                                    productoEditando = producto
+                                    mostrarFormulario = true
+                                },
+                                onEliminar = {
+                                    productoViewModel.desactivarProducto(producto.id)
+                                }
+                            )
+                        }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
+                    }
+                }
+            }
+
+            // Botón + abajo a la izquierda
             FloatingActionButton(
                 onClick = {
                     productoEditando = null
                     mostrarFormulario = true
                 },
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 16.dp, bottom = 16.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(Icons.Default.Add, "Agregar producto")
             }
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-        ) {
-            Spacer(modifier = Modifier.height(8.dp))
 
-            // Barra de búsqueda
-            OutlinedTextField(
-                value = uiState.busqueda,
-                onValueChange = { productoViewModel.buscar(it) },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Buscar producto...") },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
-                trailingIcon = {
-                    if (uiState.busqueda.isNotEmpty()) {
-                        IconButton(onClick = { productoViewModel.buscar("") }) {
-                            Icon(Icons.Default.Clear, "Limpiar")
-                        }
-                    }
-                },
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Contador de productos
-            Text(
-                text = "${uiState.productos.size} productos",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Lista de productos
-            if (uiState.productos.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("📦", style = MaterialTheme.typography.displayMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "No hay productos aún",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            "Toca + para agregar el primero",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(uiState.productos, key = { it.id }) { producto ->
-                        TarjetaProducto(
-                            producto = producto,
-                            onEditar = {
-                                productoEditando = producto
-                                mostrarFormulario = true
-                            },
-                            onEliminar = {
-                                productoViewModel.desactivarProducto(producto.id)
-                            }
-                        )
-                    }
-                    item { Spacer(modifier = Modifier.height(80.dp)) }
-                }
-            }
+            // Nota: el botón 🎤 lo pone PapeleriaScaffold abajo a la derecha automáticamente
         }
     }
 
-    // Formulario como hoja deslizable desde abajo
+    // Formulario deslizable desde abajo
     if (mostrarFormulario) {
         FormularioProducto(
             producto = productoEditando,
+            codigoBarrasInicial = codigoBarrasInicial,
             onGuardar = { nombre, desc, precio, stock, cat, codigo ->
                 productoViewModel.guardarProducto(
                     id = productoEditando?.id ?: 0,
@@ -182,87 +214,115 @@ fun TarjetaProducto(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Blanco),
+        elevation = CardDefaults.cardElevation(0.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, Gris200)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Info del producto
+            // Indicador de categoría
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Naranja100),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    producto.nombre.take(1).uppercase(),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Naranja500,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = producto.nombre,
+                    producto.nombre,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    color = Gris900,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 if (producto.categoria.isNotEmpty()) {
                     Text(
-                        text = producto.categoria,
+                        producto.categoria,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Gris500
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "Q ${String.format("%.2f", producto.precio)}",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    // Indicador de stock
-                    val colorStock = when {
-                        producto.stock == 0 -> MaterialTheme.colorScheme.error
-                        producto.stock < 5 -> MaterialTheme.colorScheme.tertiary
-                        else -> MaterialTheme.colorScheme.secondary
-                    }
-                    Text(
-                        text = "Stock: ${producto.stock}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorStock,
-                        fontWeight = FontWeight.Medium
-                    )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextoPrecio(precio = producto.precio)
+                    BadgeStock(stock = producto.stock)
                 }
             }
 
-            // Botones de acción
-            IconButton(onClick = onEditar) {
-                Icon(
-                    Icons.Default.Edit,
-                    "Editar",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            IconButton(onClick = { mostrarConfirmacion = true }) {
-                Icon(
-                    Icons.Default.Delete,
-                    "Eliminar",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            Column(horizontalAlignment = Alignment.End) {
+                IconButton(
+                    onClick = onEditar,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        null,
+                        tint = Naranja500,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                IconButton(
+                    onClick = { mostrarConfirmacion = true },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        null,
+                        tint = Rojo500,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }
 
-    // Diálogo de confirmación antes de eliminar
     if (mostrarConfirmacion) {
         AlertDialog(
             onDismissRequest = { mostrarConfirmacion = false },
-            title = { Text("¿Eliminar producto?") },
-            text = { Text("Se desactivará '${producto.nombre}'. Esta acción se puede revertir desde la base de datos.") },
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text("¿Eliminar producto?", style = MaterialTheme.typography.titleLarge)
+            },
+            text = {
+                Text(
+                    "Se desactivará '${producto.nombre}'.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Gris500
+                )
+            },
             confirmButton = {
-                TextButton(
+                TibuBoton(
+                    texto = "Eliminar",
                     onClick = {
                         onEliminar()
                         mostrarConfirmacion = false
-                    }
-                ) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                    },
+                    modifier = Modifier,
+                )
             },
             dismissButton = {
-                TextButton(onClick = { mostrarConfirmacion = false }) {
-                    Text("Cancelar")
-                }
+                TibuBotonSecundario(
+                    texto = "Cancelar",
+                    onClick = { mostrarConfirmacion = false }
+                )
             }
         )
     }
@@ -272,21 +332,22 @@ fun TarjetaProducto(
 @Composable
 fun FormularioProducto(
     producto: ProductoEntity?,
+    codigoBarrasInicial: String?,
     onGuardar: (String, String, String, String, String, String) -> Unit,
     onCerrar: () -> Unit,
     error: String?,
     exito: String?
 ) {
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var nombre by remember(producto) { mutableStateOf(producto?.nombre ?: "") }
     var descripcion by remember(producto) { mutableStateOf(producto?.descripcion ?: "") }
     var precio by remember(producto) { mutableStateOf(producto?.precio?.toString() ?: "") }
     var stock by remember(producto) { mutableStateOf(producto?.stock?.toString() ?: "") }
     var categoria by remember(producto) { mutableStateOf(producto?.categoria ?: "") }
-    var codigoBarras by remember(producto) { mutableStateOf(producto?.codigoBarras ?: "") }
+    var codigoBarras by remember(producto, codigoBarrasInicial) {
+        mutableStateOf(producto?.codigoBarras ?: codigoBarrasInicial ?: "")
+    }
 
     ModalBottomSheet(
         onDismissRequest = onCerrar,
@@ -329,19 +390,14 @@ fun FormularioProducto(
                         color = MaterialTheme.colorScheme.primary
                     ) {
                         Icon(
-                            imageVector = if (producto == null) {
-                                Icons.Default.Add
-                            } else {
-                                Icons.Default.Edit
-                            },
+                            imageVector = if (producto == null) Icons.Default.Add
+                            else Icons.Default.Edit,
                             contentDescription = null,
                             modifier = Modifier.padding(12.dp),
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
-
                     Spacer(modifier = Modifier.width(14.dp))
-
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = if (producto == null) "Nuevo producto" else "Editar producto",
@@ -349,13 +405,9 @@ fun FormularioProducto(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
-
                         Text(
-                            text = if (producto == null) {
-                                "Agrega un artículo al catálogo"
-                            } else {
-                                "Actualiza los datos del artículo"
-                            },
+                            text = if (producto == null) "Agrega un artículo al catálogo"
+                            else "Actualiza los datos del artículo",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
                         )
@@ -373,9 +425,7 @@ fun FormularioProducto(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = MaterialTheme.shapes.large,
-                leadingIcon = {
-                    Icon(Icons.Default.Inventory2, contentDescription = null)
-                }
+                leadingIcon = { Icon(Icons.Default.Inventory2, null) }
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -389,9 +439,7 @@ fun FormularioProducto(
                 minLines = 2,
                 maxLines = 3,
                 shape = MaterialTheme.shapes.large,
-                leadingIcon = {
-                    Icon(Icons.Default.Notes, contentDescription = null)
-                }
+                leadingIcon = { Icon(Icons.Default.Notes, null) }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -409,14 +457,10 @@ fun FormularioProducto(
                     singleLine = true,
                     shape = MaterialTheme.shapes.large,
                     leadingIcon = {
-                        Text(
-                            text = "Q",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Text("Q", fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary)
                     }
                 )
-
                 OutlinedTextField(
                     value = stock,
                     onValueChange = { stock = it },
@@ -425,9 +469,7 @@ fun FormularioProducto(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     shape = MaterialTheme.shapes.large,
-                    leadingIcon = {
-                        Icon(Icons.Default.Inventory, contentDescription = null)
-                    }
+                    leadingIcon = { Icon(Icons.Default.Inventory, null) }
                 )
             }
 
@@ -441,9 +483,7 @@ fun FormularioProducto(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = MaterialTheme.shapes.large,
-                leadingIcon = {
-                    Icon(Icons.Default.Category, contentDescription = null)
-                }
+                leadingIcon = { Icon(Icons.Default.Category, null) }
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -455,61 +495,39 @@ fun FormularioProducto(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = MaterialTheme.shapes.large,
-                leadingIcon = {
-                    Icon(Icons.Default.QrCode2, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.QrCode2, null) },
                 trailingIcon = {
-                    IconButton(onClick = {
-                        // Más adelante aquí puedes abrir el escáner
-                    }) {
-                        Icon(
-                            Icons.Default.QrCodeScanner,
-                            contentDescription = "Escanear código"
-                        )
+                    IconButton(onClick = { }) {
+                        Icon(Icons.Default.QrCodeScanner, "Escanear código")
                     }
                 }
             )
 
             if (error != null || exito != null) {
                 Spacer(modifier = Modifier.height(12.dp))
-
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large,
-                    color = if (error != null) {
-                        MaterialTheme.colorScheme.errorContainer
-                    } else {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    }
+                    color = if (error != null) MaterialTheme.colorScheme.errorContainer
+                    else MaterialTheme.colorScheme.secondaryContainer
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = if (error != null) {
-                                Icons.Default.Error
-                            } else {
-                                Icons.Default.CheckCircle
-                            },
+                            imageVector = if (error != null) Icons.Default.Error
+                            else Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = if (error != null) {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSecondaryContainer
-                            }
+                            tint = if (error != null) MaterialTheme.colorScheme.onErrorContainer
+                            else MaterialTheme.colorScheme.onSecondaryContainer
                         )
-
                         Spacer(modifier = Modifier.width(8.dp))
-
                         Text(
                             text = error ?: exito ?: "",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (error != null) {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSecondaryContainer
-                            }
+                            color = if (error != null) MaterialTheme.colorScheme.onErrorContainer
+                            else MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
@@ -523,34 +541,18 @@ fun FormularioProducto(
             ) {
                 OutlinedButton(
                     onClick = onCerrar,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(54.dp),
+                    modifier = Modifier.weight(1f).height(54.dp),
                     shape = MaterialTheme.shapes.large
-                ) {
-                    Text("Cancelar")
-                }
+                ) { Text("Cancelar") }
 
                 Button(
                     onClick = {
-                        onGuardar(
-                            nombre,
-                            descripcion,
-                            precio,
-                            stock,
-                            categoria,
-                            codigoBarras
-                        )
+                        onGuardar(nombre, descripcion, precio, stock, categoria, codigoBarras)
                     },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(54.dp),
+                    modifier = Modifier.weight(1f).height(54.dp),
                     shape = MaterialTheme.shapes.large
                 ) {
-                    Icon(
-                        Icons.Default.Save,
-                        contentDescription = null
-                    )
+                    Icon(Icons.Default.Save, null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Guardar")
                 }
